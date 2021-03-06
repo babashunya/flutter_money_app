@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_money_app/models/money.dart';
+import 'package:flutter_money_app/utils/database_helper.dart';
+
+const dartBlueColor = Color(0xff486579);
 
 void main() {
   runApp(MyApp());
@@ -50,17 +54,20 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  Money _money = Money();
+  List<Money> _moneys = [];
+  DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final _formKey = GlobalKey<FormState>();
+  final _ctrlCategoryId = TextEditingController();
+  final _ctrlAmount = TextEditingController();
 
-  void _incrementCounter() {
+  @override
+  void initState() {
+    super.initState();
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _dbHelper = DatabaseHelper.instance;
     });
+    _refreshMoneyList();
   }
 
   @override
@@ -81,37 +88,119 @@ class _MyHomePageState extends State<MyHomePage> {
         // Center is a layout widget. It takes a single child and positions it
         // in the middle of the parent.
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
+            _form(),
+            _list(),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
+
+  _form() => Container(
+      color: Colors.white,
+      padding: EdgeInsets.symmetric(vertical: 15, horizontal: 30),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          children: <Widget>[
+            TextFormField(
+              controller: _ctrlCategoryId,
+              decoration: InputDecoration(labelText: 'category id'),
+              onSaved: (val) =>
+                  setState(() => _money.categoryId = int.parse(val)),
+              validator: (val) =>
+                  (val.length == 0 ? 'This field is required' : null),
+            ),
+            TextFormField(
+              controller: _ctrlAmount,
+              decoration: InputDecoration(labelText: 'Amount'),
+              onSaved: (val) => setState(() => _money.amount = int.parse(val)),
+              validator: (val) =>
+                  (val.length == 0 ? 'This field is required' : null),
+            ),
+            Container(
+              margin: EdgeInsets.all(10.0),
+              child: RaisedButton(
+                onPressed: () => _onSubmit(),
+                child: Text('Submit'),
+                color: Colors.black,
+                textColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ));
+
+  _refreshMoneyList() async {
+    List<Money> x = await _dbHelper.fetchMoneys();
+    setState(() {
+      _moneys = x;
+    });
+  }
+
+  _onSubmit() async {
+    var form = _formKey.currentState;
+    if (form.validate()) {
+      form.save();
+      if (_money.id == null)
+        await _dbHelper.insertMoney(_money);
+      else
+        await _dbHelper.updateMoney(_money);
+      _refreshMoneyList();
+      _resetForm();
+    }
+  }
+
+  _resetForm() {
+    setState(() {
+      _formKey.currentState.reset();
+      _ctrlCategoryId.clear();
+      _ctrlAmount.clear();
+      _money.id = null;
+    });
+  }
+
+  _list() => Expanded(
+      child: Card(
+          margin: EdgeInsets.fromLTRB(20, 30, 20, 0),
+          child: ListView.builder(
+            padding: EdgeInsets.all(8),
+            itemBuilder: (context, index) {
+              return Column(
+                children: <Widget>[
+                  ListTile(
+                    leading: Icon(Icons.account_circle,
+                        color: dartBlueColor, size: 40.0),
+                    title: Text(
+                      _moneys[index].amount.toString(),
+                      style: TextStyle(
+                          color: dartBlueColor, fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(_moneys[index].categoryId.toString()),
+                    trailing: IconButton(
+                        icon: Icon(Icons.delete_sweep, color: Colors.black),
+                        onPressed: () async {
+                          await _dbHelper.deleteMoney(_moneys[index].id);
+                          _resetForm();
+                          _refreshMoneyList();
+                        }),
+                    onTap: () {
+                      setState(() {
+                        _money = _moneys[index];
+                        _ctrlCategoryId.text =
+                            _moneys[index].categoryId.toString();
+                        _ctrlAmount.text = _moneys[index].amount.toString();
+                      });
+                    },
+                  ),
+                  Divider(
+                    height: 5.0,
+                  ),
+                ],
+              );
+            },
+            itemCount: _moneys.length,
+          )));
 }
