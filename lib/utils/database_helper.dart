@@ -7,9 +7,14 @@ import 'package:path/path.dart';
 
 class DatabaseHelper {
   static const _databaseName = 'MoneyData.db';
-  static const _databaseVersion = 2;
+  static const _databaseVersion = 3;
   static const scripts = {
-    '2': ['ALTER TABLE ${Money.tblMoney} ADD COLUMN description STRING;']
+    '2': ['ALTER TABLE ${Money.tblMoney} ADD COLUMN description TEXT;'],
+    '3': [
+      'ALTER TABLE ${Money.tblMoney} ADD COLUMN ${Money.colDate} TEXT;',
+      'ALTER TABLE ${Money.tblMoney} ADD COLUMN ${Money.colCreatedAt} TEXT;',
+      'ALTER TABLE ${Money.tblMoney} ADD COLUMN ${Money.colUpdatedAt} TEXT;'
+    ],
   };
 
 // Singleton class
@@ -38,7 +43,6 @@ class DatabaseHelper {
         ${Money.colId} INTEGER PRIMARY KEY AUTOINCREMENT,
         ${Money.colCategoryId} INTEGER NOT NULL,
         ${Money.colAmount} INTEGER NOT NULL
-        ${Money.colDescription} STRING
       )
     ''');
   }
@@ -55,12 +59,11 @@ class DatabaseHelper {
   Future<int> insertMoney(Money money) async {
     Database db = await database;
     print(money.toMap());
-    return await db.insert(Money.tblMoney, money.toMap());
+    return await db.insert(Money.tblMoney, money.toMap(method: 'insert'));
   }
 
   Future<int> updateMoney(Money money) async {
     Database db = await database;
-    print(money.toMap());
     return await db.update(Money.tblMoney, money.toMap(),
         where: '${Money.colId}=?', whereArgs: [money.id]);
   }
@@ -74,6 +77,7 @@ class DatabaseHelper {
   Future<List<Money>> fetchMoneys() async {
     Database db = await database;
     List<Map> moneys = await db.query(Money.tblMoney);
+    print(moneys);
     return moneys.length == 0
         ? []
         : moneys.map((e) => Money.fromMap(e)).toList();

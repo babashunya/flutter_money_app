@@ -30,6 +30,7 @@ dependencies:
   cupertino_icons: ^1.0.0
   sqflite: any
   path_provider: any
+  intl: any
 
 dev_dependencies:
   flutter_test:

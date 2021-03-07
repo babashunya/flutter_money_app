@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_money_app/models/money.dart';
 import 'package:flutter_money_app/utils/database_helper.dart';
+import 'package:intl/intl.dart';
 
 const dartBlueColor = Color(0xff486579);
 
@@ -61,6 +62,7 @@ class _MyHomePageState extends State<MyHomePage> {
   final _ctrlCategoryId = TextEditingController();
   final _ctrlAmount = TextEditingController();
   final _ctrlDescription = TextEditingController();
+  final _ctrlDate = TextEditingController();
   String dropdownValue = Money.category.values.toList()[0];
 
   @override
@@ -107,6 +109,15 @@ class _MyHomePageState extends State<MyHomePage> {
         key: _formKey,
         child: Column(
           children: <Widget>[
+            Center(
+              child: Text(_money.date == null
+                  ? '日付を選択してください'
+                  : DateFormat.yMMMd().format(_money.date)),
+            ),
+            new RaisedButton(
+              onPressed: () => _selectDate(context),
+              child: new Text('日付選択'),
+            ),
             DropdownButtonFormField(
               decoration: InputDecoration(labelText: 'Category'),
               value: dropdownValue,
@@ -176,8 +187,18 @@ class _MyHomePageState extends State<MyHomePage> {
       _formKey.currentState.reset();
       _ctrlCategoryId.clear();
       _ctrlAmount.clear();
+      _ctrlDate.clear();
       _money.id = null;
     });
+  }
+
+  Future<Null> _selectDate(BuildContext context) async {
+    final DateTime picked = await showDatePicker(
+        context: context,
+        initialDate: DateTime.now(),
+        firstDate: new DateTime(2016),
+        lastDate: new DateTime.now().add(new Duration(days: 360)));
+    if (picked != null) setState(() => _money.date = picked);
   }
 
   Map<String, int> reverseCategoryMap() {
