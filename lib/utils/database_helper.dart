@@ -7,7 +7,10 @@ import 'package:path/path.dart';
 
 class DatabaseHelper {
   static const _databaseName = 'MoneyData.db';
-  static const _databaseVersion = 1;
+  static const _databaseVersion = 2;
+  static const scripts = {
+    '2': ['ALTER TABLE ${Money.tblMoney} ADD COLUMN description STRING;']
+  };
 
 // Singleton class
   DatabaseHelper._();
@@ -23,9 +26,10 @@ class DatabaseHelper {
   _initDatabase() async {
     Directory dataDirectory = await getApplicationDocumentsDirectory();
     String dbPath = join(dataDirectory.path, _databaseName);
-    print(dbPath);
     return await openDatabase(dbPath,
-        version: _databaseVersion, onCreate: _onCreateDB);
+        version: _databaseVersion,
+        onCreate: _onCreateDB,
+        onUpgrade: _onUpgradeDB);
   }
 
   _onCreateDB(Database db, int version) async {
@@ -34,8 +38,18 @@ class DatabaseHelper {
         ${Money.colId} INTEGER PRIMARY KEY AUTOINCREMENT,
         ${Money.colCategoryId} INTEGER NOT NULL,
         ${Money.colAmount} INTEGER NOT NULL
+        ${Money.colDescription} STRING
       )
     ''');
+  }
+
+  _onUpgradeDB(Database db, int oldVersion, int newVersion) async {
+    for (var i = oldVersion + 1; i <= newVersion; i++) {
+      var queries = scripts[i.toString()];
+      for (String query in queries) {
+        await db.execute(query);
+      }
+    }
   }
 
   Future<int> insertMoney(Money money) async {
