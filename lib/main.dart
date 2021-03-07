@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_money_app/models/money.dart';
 import 'package:flutter_money_app/utils/database_helper.dart';
+import 'package:intl/intl.dart';
 
 const dartBlueColor = Color(0xff486579);
 
@@ -60,6 +61,9 @@ class _MyHomePageState extends State<MyHomePage> {
   final _formKey = GlobalKey<FormState>();
   final _ctrlCategoryId = TextEditingController();
   final _ctrlAmount = TextEditingController();
+  final _ctrlDescription = TextEditingController();
+  final _ctrlDate = TextEditingController();
+  String dropdownValue = Money.category.values.toList()[0];
 
   @override
   void initState() {
@@ -105,28 +109,53 @@ class _MyHomePageState extends State<MyHomePage> {
         key: _formKey,
         child: Column(
           children: <Widget>[
-            TextFormField(
-              controller: _ctrlCategoryId,
-              decoration: InputDecoration(labelText: 'category id'),
+            Center(
+              child: Text(_money.date == null
+                  ? '日付を選択してください'
+                  : DateFormat.yMMMd().format(_money.date)),
+            ),
+            new RaisedButton(
+              onPressed: () => _selectDate(context),
+              child: new Text('日付選択'),
+            ),
+            DropdownButtonFormField(
+              decoration: InputDecoration(labelText: 'Category'),
+              value: dropdownValue,
+              icon: Icon(Icons.arrow_downward),
+              iconSize: 24,
+              elevation: 16,
+              style: TextStyle(color: Colors.deepPurple),
               onSaved: (val) =>
-                  setState(() => _money.categoryId = int.parse(val)),
-              validator: (val) =>
-                  (val.length == 0 ? 'This field is required' : null),
+                  setState(() => _money.categoryId = reverseCategoryMap()[val]),
+              onChanged: (String newValue) {
+                setState(() {
+                  dropdownValue = newValue;
+                });
+              },
+              items: Money.category.values
+                  .map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
             ),
             TextFormField(
-              controller: _ctrlAmount,
+              controller: _ctrlCategoryId,
               decoration: InputDecoration(labelText: 'Amount'),
               onSaved: (val) => setState(() => _money.amount = int.parse(val)),
               validator: (val) =>
                   (val.length == 0 ? 'This field is required' : null),
             ),
+            TextFormField(
+              controller: _ctrlDescription,
+              decoration: InputDecoration(labelText: 'Description'),
+              onSaved: (val) => setState(() => _money.description = val),
+            ),
             Container(
-              margin: EdgeInsets.all(10.0),
-              child: RaisedButton(
-                onPressed: () => _onSubmit(),
+              child: ElevatedButton(
                 child: Text('Submit'),
-                color: Colors.black,
-                textColor: Colors.white,
+                onPressed: () => _onSubmit(),
               ),
             ),
           ],
@@ -158,8 +187,24 @@ class _MyHomePageState extends State<MyHomePage> {
       _formKey.currentState.reset();
       _ctrlCategoryId.clear();
       _ctrlAmount.clear();
+      _ctrlDate.clear();
       _money.id = null;
     });
+  }
+
+  Future<Null> _selectDate(BuildContext context) async {
+    final DateTime picked = await showDatePicker(
+        context: context,
+        initialDate: DateTime.now(),
+        firstDate: new DateTime(2016),
+        lastDate: new DateTime.now().add(new Duration(days: 360)));
+    if (picked != null) setState(() => _money.date = picked);
+  }
+
+  Map<String, int> reverseCategoryMap() {
+    Map<String, int> map = {};
+    Money.category.forEach((k, v) => map[v] = k);
+    return map;
   }
 
   _list() => Expanded(
@@ -171,21 +216,33 @@ class _MyHomePageState extends State<MyHomePage> {
               return Column(
                 children: <Widget>[
                   ListTile(
-                    leading: Icon(Icons.account_circle,
+                    leading: Icon(Icons.shopping_bag,
                         color: dartBlueColor, size: 40.0),
                     title: Text(
-                      _moneys[index].amount.toString(),
+                      Money.category[_moneys[index].categoryId],
                       style: TextStyle(
                           color: dartBlueColor, fontWeight: FontWeight.bold),
                     ),
-                    subtitle: Text(_moneys[index].categoryId.toString()),
-                    trailing: IconButton(
-                        icon: Icon(Icons.delete_sweep, color: Colors.black),
-                        onPressed: () async {
-                          await _dbHelper.deleteMoney(_moneys[index].id);
-                          _resetForm();
-                          _refreshMoneyList();
-                        }),
+                    subtitle: Text(_moneys[index].description == null
+                        ? ''
+                        : _moneys[index].description),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(_moneys[index].amount.toString(),
+                            style: TextStyle(
+                              color: dartBlueColor,
+                              fontWeight: FontWeight.bold,
+                            )),
+                        IconButton(
+                            icon: Icon(Icons.delete_sweep, color: Colors.black),
+                            onPressed: () async {
+                              await _dbHelper.deleteMoney(_moneys[index].id);
+                              _resetForm();
+                              _refreshMoneyList();
+                            }),
+                      ],
+                    ),
                     onTap: () {
                       setState(() {
                         _money = _moneys[index];
