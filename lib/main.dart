@@ -62,8 +62,7 @@ class _MyHomePageState extends State<MyHomePage> {
   final _ctrlCategoryId = TextEditingController();
   final _ctrlAmount = TextEditingController();
   final _ctrlDescription = TextEditingController();
-  final _ctrlDate = TextEditingController();
-  String dropdownValue = Money.category.values.toList()[0];
+  String categoryDropdown = Money.category.values.toList()[0];
 
   @override
   void initState() {
@@ -108,6 +107,7 @@ class _MyHomePageState extends State<MyHomePage> {
       child: Form(
         key: _formKey,
         child: Column(
+          // TODO: バリデータを追加する
           children: <Widget>[
             Center(
               child: Text(_money.date == null
@@ -120,7 +120,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             DropdownButtonFormField(
               decoration: InputDecoration(labelText: 'Category'),
-              value: dropdownValue,
+              value: categoryDropdown,
               icon: Icon(Icons.arrow_downward),
               iconSize: 24,
               elevation: 16,
@@ -129,7 +129,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   setState(() => _money.categoryId = reverseCategoryMap()[val]),
               onChanged: (String newValue) {
                 setState(() {
-                  dropdownValue = newValue;
+                  categoryDropdown = newValue;
                 });
               },
               items: Money.category.values
@@ -141,7 +141,7 @@ class _MyHomePageState extends State<MyHomePage> {
               }).toList(),
             ),
             TextFormField(
-              controller: _ctrlCategoryId,
+              controller: _ctrlAmount,
               decoration: InputDecoration(labelText: 'Amount'),
               onSaved: (val) => setState(() => _money.amount = int.parse(val)),
               validator: (val) =>
@@ -187,8 +187,10 @@ class _MyHomePageState extends State<MyHomePage> {
       _formKey.currentState.reset();
       _ctrlCategoryId.clear();
       _ctrlAmount.clear();
-      _ctrlDate.clear();
+      _ctrlDescription.clear();
       _money.id = null;
+      _money.date = null;
+      categoryDropdown = Money.category.values.toList()[0];
     });
   }
 
@@ -249,6 +251,10 @@ class _MyHomePageState extends State<MyHomePage> {
                         _ctrlCategoryId.text =
                             _moneys[index].categoryId.toString();
                         _ctrlAmount.text = _moneys[index].amount.toString();
+                        _ctrlDescription.text = _moneys[index].description;
+                        print(Money.category[_moneys[index].categoryId]);
+                        categoryDropdown =
+                            Money.category[_moneys[index].categoryId];
                       });
                     },
                   ),
